@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit configuration — https://docs.coderabbit.ai/reference/configuration
+#
+# Project: auth0r — an Auth0 management TUI built with Bubble Tea.
+# Review priorities: clean & composable TUI architecture, idiomatic Go.
+
+language: en-US
+early_access: false
+tone_instructions: >
+  Be direct and concrete. Favor idiomatic Go and clean architecture over
+  cleverness. When flagging an issue, name the idiom or principle violated and
+  show the smallest fix. This is a learning project — explain the "why", not
+  just the "what".
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+
+  # Review guidance applied across the whole repo. Path-specific rules below
+  # narrow these for TUI and domain code.
+  path_instructions:
+    - path: "**/*.go"
+      instructions: >
+        Enforce idiomatic Go. Flag the following:
+        - Errors that are swallowed, logged-and-continued where they should
+          propagate, or wrapped without context — prefer `fmt.Errorf("doing X: %w", err)`.
+        - `panic` outside of `main`/init or truly unrecoverable invariants.
+        - Naked returns in non-trivial functions, and stutter in names
+          (e.g. `auth0.Auth0Client`).
+        - Interfaces defined on the producer side rather than the consumer;
+          interfaces should be small and declared where they're used.
+        - Premature interfaces/abstraction with a single implementation.
+        - Missing `context.Context` on any function that does I/O (exec, network),
+          and context passed anywhere other than the first parameter.
+        - Goroutines with no clear lifecycle/cancellation, and shared mutable
+          state without synchronization.
+        - Exported symbols without doc comments; comments that restate the code
+          instead of explaining intent.
+        - Accepting concrete types where an interface would decouple, or
+          returning interfaces where a concrete type is clearer (accept
+          interfaces, return structs).
+        - Ignored values from `exec.Command` stderr / non-zero exit codes.
+        Prefer the standard library and small, composable functions over
+        frameworks and deep call chains.
+
+    - path: "**/{tui,ui}/**/*.go"
+      instructions: >
+        This is Bubble Tea (Elm Architecture) code. Enforce strict separation:
+        - `Update` must be pure-ish: it returns a new model + a `tea.Cmd`. Flag
+          any blocking I/O (exec, network, sleeps, file reads) performed directly
+          inside `Update` or `View` — that work belongs in a `tea.Cmd` returning
+          a message.
+        - `View` must be a pure function of model -> string. Flag state mutation
+          or side effects in `View`.
+        - All state lives in the Model; flag globals or state mutated outside
+          `Update`.
+        - Favor composable sub-models with their own Init/Update/View over one
+          giant model with a `mode` switch that keeps growing. Flag models that
+          have outgrown a single responsibility.
+        - Messages should be typed structs/values, not stringly-typed or
+          `interface{}` blobs. One message type per distinct event.
+        - Keep rendering (lipgloss styles) separable from logic; flag layout
+          math tangled into business logic.
+        - Watch for unbounded re-rendering work and allocation in `View` (it runs
+          every frame).
+
+    - path: "cmd/**/*.go"
+      instructions: >
+        Entrypoints should be thin: parse flags/env, wire dependencies, start the
+        program, and translate errors into exit codes. Flag business logic that
+        belongs in a package. `main` is the one acceptable place to `log.Fatal`.
+
+  # Run static analysis CodeRabbit supports for Go.
+  tools:
+    gopls:
+      enabled: true
+    golangci-lint:
+      enabled: true
+
+chat:
+  auto_reply: true

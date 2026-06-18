@@ -1,0 +1,8 @@
+auth0-roadmap.md
+# built binary
+/auth0r
+# release artifacts (if you use GoReleaser later)
+/dist/
+# editor/OS noise
+.DS_Store
+*.swp
